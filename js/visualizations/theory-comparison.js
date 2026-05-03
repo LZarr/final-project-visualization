@@ -221,7 +221,7 @@ function updateTCFinding() {
   const active = [];
   if (document.getElementById('tc-zones')?.checked)   active.push('concentric zones');
   if (document.getElementById('tc-vitality')?.checked) active.push('Jacobs vitality');
-  if (document.getElementById('tc-lacy')?.checked)     active.push('Lacy's Black middle-class tracts');
+  if (document.getElementById('tc-lacy')?.checked)     active.push("Lacy\u2019s Black middle-class tracts");
   if (document.getElementById('tc-vacancy')?.checked)  active.push('vacancy rate');
 
   if (!active.length) {
