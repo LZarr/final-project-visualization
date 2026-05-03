@@ -1,7 +1,7 @@
 // ── Census API Configuration ──
 // Get a free key at: https://api.census.gov/data/key_signup.html
 // Replace the string below with your key, then save.
-const CENSUS_API_KEY = 'YOUR_CENSUS_API_KEY';
+const CENSUS_API_KEY = 'b50993c8e9c338e0d500c474cb9ceeb14e95e7d5';
 
 // ACS 5-year vintage to use (update as newer data becomes available)
 const ACS_VINTAGE = '2023';
