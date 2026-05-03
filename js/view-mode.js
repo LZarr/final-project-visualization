@@ -1,5 +1,5 @@
 // ── Shared view mode toggle ──
-// Four modes: side-by-side | reality | ideal | overlay
+// Modes: side-by-side | reality | ideal | overlay (overlay only if buildOverlayLayer provided)
 // Call setupViewMode() after both maps are initialized in a section.
 
 function setupViewMode({ barId, panelsId, getRealityMap, getIdealMap, buildOverlayLayer }) {
@@ -11,7 +11,7 @@ function setupViewMode({ barId, panelsId, getRealityMap, getIdealMap, buildOverl
     { key: 'side-by-side', label: 'Side by side' },
     { key: 'reality',      label: 'Reality only' },
     { key: 'ideal',        label: 'Ideal only'   },
-    { key: 'overlay',      label: 'Overlay'       },
+    ...(buildOverlayLayer ? [{ key: 'overlay', label: 'Overlay' }] : []),
   ];
 
   MODES.forEach(({ key, label }) => {

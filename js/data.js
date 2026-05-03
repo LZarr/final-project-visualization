@@ -160,6 +160,20 @@ function joinDataToGeoJSON(geojson, dataRows) {
   };
 }
 
+// ── LODES job counts ──
+
+/**
+ * Fetch pre-processed LODES WAC job totals by tract GEOID.
+ * Returns an object: { "29510127800": 12007, ... }
+ */
+async function fetchLODESJobs() {
+  const key = 'lodes-jobs';
+  if (DataCache[key]) return DataCache[key];
+  const data = await fetchJSON('data/stl-lodes-jobs.json');
+  DataCache[key] = data;
+  return data;
+}
+
 // ── OpenStreetMap POI density ──
 
 /**

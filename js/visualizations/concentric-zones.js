@@ -36,11 +36,10 @@ async function initConcentricZones() {
     renderCZMap(joined);
     renderCZIdealMap(joined);
     setupViewMode({
-      barId:          'cz-view-bar',
-      panelsId:       'cz-panels',
-      getRealityMap:  () => czMap,
-      getIdealMap:    () => czIdealMap,
-      buildOverlayLayer: map => buildCZOverlayLayer(joined, map),
+      barId:         'cz-view-bar',
+      panelsId:      'cz-panels',
+      getRealityMap: () => czMap,
+      getIdealMap:   () => czIdealMap,
     });
   } catch (err) {
     container.innerHTML = `<div class="error-msg">Could not load data.<br><small>${err.message}</small></div>`;

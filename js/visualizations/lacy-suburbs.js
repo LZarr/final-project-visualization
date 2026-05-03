@@ -4,7 +4,7 @@
 // Goal: reveal spatial sorting of middle-class Black households into different
 // municipalities than white households at equivalent income levels.
 
-let lacyMap, lacyIdealMap, lacyGeoLayer;
+let lacyMap, lacyGeoLayer;
 
 async function initLacySuburbs() {
   const mapEl = document.getElementById('lacy-map');
@@ -23,15 +23,7 @@ async function initLacySuburbs() {
 
     mapEl.innerHTML = '';
     renderLacyMap(withTerciles);
-    renderLacyIdealMap(withTerciles);
     renderBivariateLegend();
-    setupViewMode({
-      barId:         'lacy-view-bar',
-      panelsId:      'lacy-panels',
-      getRealityMap: () => lacyMap,
-      getIdealMap:   () => lacyIdealMap,
-      buildOverlayLayer: map => buildLacyOverlayLayer(withTerciles, map),
-    });
     updateLacyFinding(withTerciles);
 
   } catch (err) {
@@ -294,7 +286,8 @@ function updateLacyFinding(geojson) {
   `;
 }
 
-// ── Ideal map: Lacy's theory confirmed ──
+// ── (Ideal map removed) ──
+/*
 // Shows what the county would look like if Lacy's sorting pattern held at its theoretical maximum:
 // high-income tracts are sharply split — white-high-income clustered in the west/southwest,
 // Black-high-income clustered in a distinct band to the north/northeast.
@@ -410,3 +403,4 @@ function buildLacyOverlayLayer(geojson, map) {
     },
   }).addTo(map);
 }
+*/

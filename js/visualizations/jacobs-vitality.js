@@ -10,32 +10,50 @@ async function initJacobsVitality() {
   mapEl.innerHTML = '<div class="loading-msg">Loading OSM and tract data…</div>';
 
   try {
-    // Fetch city tract GeoJSON and demographic data concurrently
-    const [cityGJ, demoData] = await Promise.all([
+    // Fetch city tract GeoJSON, demographics, and LODES jobs concurrently
+    const [cityGJ, demoData, lodesJobs] = await Promise.all([
       fetchTractGeoJSON(FIPS.STL_CITY),
       fetchDemographics(),
+      fetchLODESJobs(),
     ]);
 
     // City demographics only (for tract context)
     const cityDemo = demoData.filter(d => d._isCity);
     const cityJoined = joinDataToGeoJSON(cityGJ, cityDemo);
 
+    // Attach LODES job_density to each tract
+    const cityWithLODES = {
+      ...cityJoined,
+      features: cityJoined.features.map(f => {
+        const geoid = f.properties.GEOID || f.properties.geoid;
+        const jobs  = lodesJobs[geoid] || 0;
+        const area  = tractAreaKm2(f);
+        return {
+          ...f,
+          properties: {
+            ...f.properties,
+            job_count:   jobs,
+            job_density: area > 0 ? jobs / area : 0,
+          },
+        };
+      }),
+    };
+
     // Fetch OSM POIs for the city bounding box
-    // This may be slow on first load — results are cached
     mapEl.innerHTML = '<div class="loading-msg">Querying OpenStreetMap…</div>';
     let poiGJ;
     try {
       poiGJ = await fetchOSMPOIs(BBOX_STL_CITY);
     } catch (e) {
-      console.warn('OSM fetch failed, falling back to vacancy proxy:', e);
+      console.warn('OSM fetch failed:', e);
       poiGJ = null;
     }
 
     jvPoiData = poiGJ;
     mapEl.innerHTML = '';
 
-    // Compute POI density per tract (POIs per sq km)
-    const cityWithVitality = computeVitalityMetrics(cityJoined, poiGJ);
+    // Compute POI density per tract (POIs per sq km), preserving job_density
+    const cityWithVitality = computeVitalityMetrics(cityWithLODES, poiGJ);
 
     renderJVMap(cityWithVitality);
     renderJVIdealMap(cityWithVitality);
@@ -106,9 +124,8 @@ function computeVitalityMetrics(geojson, poiGJ) {
           ...f.properties,
           poi_count:   pois,
           poi_density: area > 0 ? pois / area : 0,
-          // job_density placeholder — would come from LODES data file
-          // Populated via loadLODESData() if available
-          job_density: f.properties.job_density || null,
+          // job_density already attached from LODES in initJacobsVitality — preserve it
+          job_density: f.properties.job_density ?? null,
         },
       };
     }),
@@ -154,7 +171,7 @@ function tractAreaKm2(feature) {
 
 const JV_SCALES = {
   poi_density: d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 80]),
-  job_density: d3.scaleSequential(d3.interpolatePurples).domain([0, 2000]),
+  job_density: d3.scaleSequential(d3.interpolatePurples).domain([0, 5000]),
 };
 
 function jvStyle(feature, metric) {

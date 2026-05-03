@@ -148,17 +148,7 @@
 
       <div class="viz-container">
         <div class="bivariate-legend" id="lacy-legend"></div>
-        <div class="view-mode-bar" id="lacy-view-bar"></div>
-        <div class="viz-panels" id="lacy-panels" data-mode="side-by-side">
-          <div class="panel panel-reality">
-            <div class="panel-label">St. Louis County Today</div>
-            <div id="lacy-map" class="map-panel"></div>
-          </div>
-          <div class="panel panel-ideal">
-            <div class="panel-label panel-label--ideal">Lacy&rsquo;s Theory Confirmed <em>(illustrative)</em></div>
-            <div id="lacy-ideal-map" class="map-panel"></div>
-          </div>
-        </div>
+        <div id="lacy-map" class="map-panel"></div>
         <div id="lacy-tooltip" class="tooltip hidden"></div>
       </div>
 
@@ -191,8 +181,8 @@
 
       <div class="viz-container">
         <div class="controls" id="tc-controls">
-          <label><input type="checkbox" id="tc-zones" checked /> Concentric zones</label>
-          <label><input type="checkbox" id="tc-vitality" /> Vitality (Jacobs)</label>
+          <label><input type="checkbox" id="tc-convergence" checked /> Convergence score</label>
+          <label><input type="checkbox" id="tc-zones" /> % Black (Park &amp; Burgess)</label>
           <label><input type="checkbox" id="tc-lacy" /> Black middle-class tracts (Lacy)</label>
           <label><input type="checkbox" id="tc-vacancy" /> Vacancy rate</label>
         </div>
