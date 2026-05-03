@@ -1,7 +1,26 @@
 // ── Concentric Zone Model (Park & Burgess) ──
 // Choropleth of St. Louis (city + county) with theoretical concentric rings overlay.
 
-let czMap, czGeoLayer, czLegend, czCircles = [];
+let czMap, czIdealMap, czGeoLayer, czIdealGeoLayer, czLegend, czCircles = [];
+
+// ── Module-level geo helpers (also used by ideal map builder) ──
+
+function czDistKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function czCentroid(feature) {
+  const coords = feature.geometry?.coordinates;
+  if (!coords) return null;
+  const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+  const lons = ring.map(c => c[0]);
+  const lats = ring.map(c => c[1]);
+  return [lats.reduce((a,b)=>a+b,0)/lats.length, lons.reduce((a,b)=>a+b,0)/lons.length];
+}
 
 async function initConcentricZones() {
   const container = document.getElementById('cz-map');
@@ -15,6 +34,14 @@ async function initConcentricZones() {
     const joined = joinDataToGeoJSON(geojson, data);
     container.innerHTML = '';
     renderCZMap(joined);
+    renderCZIdealMap(joined);
+    setupViewMode({
+      barId:          'cz-view-bar',
+      panelsId:       'cz-panels',
+      getRealityMap:  () => czMap,
+      getIdealMap:    () => czIdealMap,
+      buildOverlayLayer: map => buildCZOverlayLayer(joined, map),
+    });
   } catch (err) {
     container.innerHTML = `<div class="error-msg">Could not load data.<br><small>${err.message}</small></div>`;
     console.error('Concentric Zones error:', err);
@@ -48,6 +75,7 @@ function renderCZMap(geojson) {
   document.getElementById('cz-layer-select').addEventListener('change', () => {
     const layer = getCurrentCZLayer();
     czGeoLayer.setStyle(f => czStyle(f, layer));
+    if (czIdealGeoLayer) czIdealGeoLayer.setStyle(f => czIdealStyle(f, layer));
     updateCZLegend(layer);
     updateCZFinding(geojson);
   });
@@ -197,29 +225,11 @@ function updateCZFinding(geojson) {
   const center = CONCENTRIC_ZONE_CENTER;
   const features = geojson.features.filter(f => f.properties._hasData);
 
-  function distKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  }
-
-  function centroid(feature) {
-    const coords = feature.geometry?.coordinates;
-    if (!coords) return null;
-    // Rough centroid from first ring of first polygon
-    const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
-    const lons = ring.map(c => c[0]);
-    const lats = ring.map(c => c[1]);
-    return [lats.reduce((a,b)=>a+b,0)/lats.length, lons.reduce((a,b)=>a+b,0)/lons.length];
-  }
-
   const inner = [], outer = [];
   features.forEach(f => {
-    const c = centroid(f);
+    const c = czCentroid(f);
     if (!c) return;
-    const d = distKm(center[0], center[1], c[0], c[1]);
+    const d = czDistKm(center[0], center[1], c[0], c[1]);
     const val = f.properties[layer];
     if (val == null) return;
     if (d < 4) inner.push(val);
@@ -255,4 +265,133 @@ function updateCZFinding(geojson) {
       : ''}
     </p>
   `;
+}
+
+// ── Ideal map: Park & Burgess ──
+// Each tract is colored purely by its distance from downtown, producing the
+// smooth concentric gradient the theory predicts. No real Census data — illustrative only.
+
+// Zone index by distance from center (mirrors CONCENTRIC_ZONE_RADII)
+function czZoneIndex(distKm) {
+  for (let i = 0; i < CONCENTRIC_ZONE_RADII.length; i++) {
+    if (distKm < CONCENTRIC_ZONE_RADII[i]) return i;
+  }
+  return CONCENTRIC_ZONE_RADII.length; // beyond outer ring
+}
+
+// Ideal color: maps zone to the same scale as the reality map so comparison is direct.
+// For income: inner = low, outer = high (as theory predicts).
+// For %Black: theory implies decreasing toward periphery (zone of transition nearest core).
+function czIdealValue(distKm, layerKey) {
+  const zoneCount = CONCENTRIC_ZONE_RADII.length + 1;
+  const zi = czZoneIndex(distKm);
+  const t = zi / (zoneCount - 1); // 0 = innermost, 1 = outermost
+  const scales = {
+    pct_white:     t * 100,             // increases outward
+    pct_black:     (1 - t) * 80,        // decreases outward
+    median_income: t * 120000,          // increases outward
+    gini:          0.55 - t * 0.2,      // higher inequality near core
+  };
+  return scales[layerKey] ?? 0;
+}
+
+function czIdealStyle(feature, layerKey) {
+  const c = czCentroid(feature);
+  if (!c) return { fillColor: '#ddd', fillOpacity: 0.7, color: '#aaa', weight: 0.5 };
+  const dist  = czDistKm(CONCENTRIC_ZONE_CENTER[0], CONCENTRIC_ZONE_CENTER[1], c[0], c[1]);
+  const val   = czIdealValue(dist, layerKey);
+  const scale = CZ_SCALES[layerKey];
+  return {
+    fillColor:   scale(val),
+    fillOpacity: 0.72,
+    color:       '#aaa',
+    weight:      0.5,
+    opacity:     1,
+  };
+}
+
+function renderCZIdealMap(geojson) {
+  czIdealMap = L.map('cz-ideal-map', { center: MAP_CENTER, zoom: MAP_ZOOM });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+    maxZoom: 18,
+  }).addTo(czIdealMap);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    attribution: '', maxZoom: 18,
+  }).addTo(czIdealMap);
+
+  const layerKey = getCurrentCZLayer();
+  czIdealGeoLayer = L.geoJSON(geojson, {
+    style: f => czIdealStyle(f, layerKey),
+    onEachFeature(feature, layer) {
+      const c = czCentroid(feature);
+      if (!c) return;
+      const dist = czDistKm(CONCENTRIC_ZONE_CENTER[0], CONCENTRIC_ZONE_CENTER[1], c[0], c[1]);
+      const zi   = czZoneIndex(dist);
+      const zoneName = CONCENTRIC_ZONE_LABELS[zi] || 'Beyond commuter zone';
+      layer.on('mouseover', () => {
+        layer.bindPopup(
+          `<strong>${feature.properties.NAME}</strong><br>
+           <em>Theoretical zone: ${zoneName}</em><br>
+           Distance from downtown: ${dist.toFixed(1)} km<br>
+           <small style="color:#888">Values are illustrative — derived from distance, not Census data.</small>`
+        ).openPopup();
+      });
+      layer.on('mouseout', () => layer.closePopup());
+    },
+  }).addTo(czIdealMap);
+
+  // Add rings to ideal map too — they define the zones
+  const center = L.latLng(CONCENTRIC_ZONE_CENTER[0], CONCENTRIC_ZONE_CENTER[1]);
+  CONCENTRIC_ZONE_RADII.forEach((r, i) => {
+    L.circle(center, {
+      radius: r * 1000, color: '#444', weight: 1.5,
+      opacity: 0.7, fill: false, dashArray: '6 4',
+    })
+    .bindTooltip(CONCENTRIC_ZONE_LABELS[i], { direction: 'right', opacity: 0.9 })
+    .addTo(czIdealMap);
+  });
+
+  // Ideal-map legend note
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = `
+      <h4 style="color:#7a5200">Ideal (illustrative)</h4>
+      <p style="font-size:0.7rem;color:#666;max-width:130px;line-height:1.4">
+        Colors derived from distance to downtown only — what the theory predicts, not what exists.</p>
+    `;
+    return div;
+  };
+  legend.addTo(czIdealMap);
+}
+
+// ── Overlay layer: ideal zones drawn on top of the reality map ──
+function buildCZOverlayLayer(geojson, map) {
+  return L.geoJSON(geojson, {
+    style(feature) {
+      const c = czCentroid(feature);
+      if (!c) return { fill: false, stroke: false };
+      const dist  = czDistKm(CONCENTRIC_ZONE_CENTER[0], CONCENTRIC_ZONE_CENTER[1], c[0], c[1]);
+      const zi    = czZoneIndex(dist);
+      // Draw zone boundary lines only — no fill, so reality choropleth shows through
+      const zoneColors = ['#e41a1c','#ff7f00','#4daf4a','#377eb8','#984ea3','#555'];
+      return {
+        fill:    false,
+        color:   zoneColors[zi] ?? '#555',
+        weight:  2,
+        opacity: 0.7,
+      };
+    },
+    onEachFeature(feature, layer) {
+      const c = czCentroid(feature);
+      if (!c) return;
+      const dist = czDistKm(CONCENTRIC_ZONE_CENTER[0], CONCENTRIC_ZONE_CENTER[1], c[0], c[1]);
+      const zi   = czZoneIndex(dist);
+      layer.bindTooltip(`Theoretical zone: ${CONCENTRIC_ZONE_LABELS[zi] || 'Beyond commuter zone'}`,
+        { sticky: true, opacity: 0.85 });
+    },
+  }).addTo(map);
 }

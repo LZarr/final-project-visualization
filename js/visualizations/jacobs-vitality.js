@@ -3,11 +3,10 @@
 // Bar chart: top neighborhoods by selected vitality metric.
 // Note: B08301 (transit to work) deliberately NOT used — poor proxy for street vitality.
 
-let jvMap, jvGeoLayer, jvPoiData = null;
+let jvMap, jvIdealMap, jvGeoLayer, jvPoiData = null;
 
 async function initJacobsVitality() {
-  const mapEl  = document.getElementById('jv-map');
-  const chartEl = document.getElementById('jv-chart');
+  const mapEl = document.getElementById('jv-map');
   mapEl.innerHTML = '<div class="loading-msg">Loading OSM and tract data…</div>';
 
   try {
@@ -39,7 +38,15 @@ async function initJacobsVitality() {
     const cityWithVitality = computeVitalityMetrics(cityJoined, poiGJ);
 
     renderJVMap(cityWithVitality);
+    renderJVIdealMap(cityWithVitality);
     renderJVBarChart(cityWithVitality, 'poi_density');
+    setupViewMode({
+      barId:         'jv-view-bar',
+      panelsId:      'jv-panels',
+      getRealityMap: () => jvMap,
+      getIdealMap:   () => jvIdealMap,
+      buildOverlayLayer: map => buildJVOverlayLayer(cityWithVitality, map),
+    });
 
     document.getElementById('jv-metric-select').addEventListener('change', e => {
       const metric = e.target.value;
@@ -326,4 +333,117 @@ function updateJVFinding(geojson, metric) {
     residential tracts suggests her conditions are met in isolated nodes rather than a continuous
     urban fabric.</p>
   `;
+}
+
+// ── Ideal map: Jane Jacobs ──
+// Shows what St. Louis would look like if Jacobs's conditions held everywhere:
+// uniformly high and evenly distributed POI density across all tracts,
+// with a mild gradient toward the core (denser center, still vital everywhere).
+
+// Ideal POI density per tract: high throughout, slight peak near center
+function jvIdealDensity(feature) {
+  const coords = feature.geometry?.coordinates;
+  if (!coords) return 40;
+  const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+  const lons = ring.map(c => c[0]);
+  const lats = ring.map(c => c[1]);
+  const lat  = lats.reduce((a, b) => a + b, 0) / lats.length;
+  const lon  = lons.reduce((a, b) => a + b, 0) / lons.length;
+
+  // Distance from downtown — closer = denser, but floor is high
+  const R = 6371;
+  const [clat, clon] = [38.6331, -90.1997];
+  const dLat = (lat - clat) * Math.PI / 180;
+  const dLon = (lon - clon) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(clat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLon/2)**2;
+  const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  // Jacobs ideal: no tract below 30 POIs/km²; peaks at ~80 near core
+  return Math.max(30, 80 - dist * 3.5);
+}
+
+function renderJVIdealMap(geojson) {
+  jvIdealMap = L.map('jv-ideal-map', { center: [38.627, -90.230], zoom: 12 });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+  }).addTo(jvIdealMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    attribution: '',
+  }).addTo(jvIdealMap);
+
+  const scale = JV_SCALES['poi_density'];
+
+  L.geoJSON(geojson, {
+    style(feature) {
+      const val = jvIdealDensity(feature);
+      return {
+        fillColor:   scale(val),
+        fillOpacity: 0.75,
+        color:       '#555',
+        weight:      0.5,
+      };
+    },
+    onEachFeature(feature, layer) {
+      const val = jvIdealDensity(feature);
+      layer.on('mouseover', () => {
+        layer.bindPopup(
+          `<strong>${feature.properties.NAME}</strong><br>
+           Ideal POI density: ${val.toFixed(1)} / km²<br>
+           <small style="color:#888">Illustrative — derived from Jacobs's theory, not OSM data.</small>`
+        ).openPopup();
+      });
+      layer.on('mouseout', () => layer.closePopup());
+    },
+  }).addTo(jvIdealMap);
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create('div', 'map-legend');
+    const steps = 5;
+    const [lo, hi] = scale.domain();
+    const colors = Array.from({ length: steps }, (_, i) => scale(lo + (hi - lo) * i / (steps - 1)));
+    div.innerHTML = `
+      <h4 style="color:#7a5200">Ideal (illustrative)</h4>
+      <div class="legend-gradient">
+        <div class="legend-gradient-bar"
+             style="background:linear-gradient(to right,${colors.join(',')})"></div>
+        <div class="legend-gradient-labels"><span>${lo}</span><span>${hi}+</span></div>
+      </div>
+      <p style="font-size:0.7rem;color:#666;max-width:130px;line-height:1.4;margin-top:0.4rem">
+        Jacobs ideal: high mixed-use density everywhere, not just in pockets.</p>
+    `;
+    return div;
+  };
+  legend.addTo(jvIdealMap);
+}
+
+// ── Overlay: ideal density contour drawn on the reality map ──
+function buildJVOverlayLayer(geojson, map) {
+  return L.geoJSON(geojson, {
+    style(feature) {
+      const idealVal   = jvIdealDensity(feature);
+      const realVal    = feature.properties.poi_density || 0;
+      const deficit    = idealVal - realVal;
+      // Hatching via opacity: larger deficit = more opaque red overlay
+      const opacity = Math.min(0.6, Math.max(0, deficit / 80));
+      return {
+        fillColor:   deficit > 0 ? '#d73027' : '#1a9850',
+        fillOpacity: opacity,
+        color:       '#888',
+        weight:      0.4,
+      };
+    },
+    onEachFeature(feature, layer) {
+      const ideal = jvIdealDensity(feature);
+      const real  = feature.properties.poi_density || 0;
+      const diff  = ideal - real;
+      layer.bindTooltip(
+        `${feature.properties.NAME?.replace(/,.*$/, '') || 'Tract'}<br>
+         Real: ${real.toFixed(1)} · Ideal: ${ideal.toFixed(1)}<br>
+         <strong>${diff > 0 ? '▼ Gap: ' + diff.toFixed(1) : '✓ Meets ideal'}</strong>`,
+        { sticky: true, opacity: 0.9 }
+      );
+    },
+  }).addTo(map);
 }

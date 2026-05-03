@@ -63,7 +63,17 @@
             Show theoretical rings
           </label>
         </div>
-        <div id="cz-map" class="map-panel"></div>
+        <div class="view-mode-bar" id="cz-view-bar"></div>
+        <div class="viz-panels" id="cz-panels" data-mode="side-by-side">
+          <div class="panel panel-reality">
+            <div class="panel-label">St. Louis Today</div>
+            <div id="cz-map" class="map-panel"></div>
+          </div>
+          <div class="panel panel-ideal">
+            <div class="panel-label panel-label--ideal">Park &amp; Burgess Ideal <em>(illustrative)</em></div>
+            <div id="cz-ideal-map" class="map-panel"></div>
+          </div>
+        </div>
         <div id="cz-tooltip" class="tooltip hidden"></div>
       </div>
 
@@ -86,20 +96,29 @@
         </p>
       </div>
 
-      <div class="viz-container two-panel">
-        <div id="jv-map" class="map-panel"></div>
-        <div id="jv-chart" class="chart-panel">
+      <div class="viz-container">
+        <div class="controls" id="jv-controls">
+          <label>Metric:
+            <select id="jv-metric-select">
+              <option value="poi_density">POI Density (OSM)</option>
+              <option value="job_density">Job Density (LODES)</option>
+            </select>
+          </label>
+        </div>
+        <div class="view-mode-bar" id="jv-view-bar"></div>
+        <div class="viz-panels" id="jv-panels" data-mode="side-by-side">
+          <div class="panel panel-reality">
+            <div class="panel-label">St. Louis Today</div>
+            <div id="jv-map" class="map-panel"></div>
+          </div>
+          <div class="panel panel-ideal">
+            <div class="panel-label panel-label--ideal">Jacobs Ideal City <em>(illustrative)</em></div>
+            <div id="jv-ideal-map" class="map-panel"></div>
+          </div>
+        </div>
+        <div class="chart-panel-below">
           <svg id="jv-bar-chart"></svg>
         </div>
-      </div>
-
-      <div class="controls" id="jv-controls">
-        <label>Metric:
-          <select id="jv-metric-select">
-            <option value="poi_density">POI Density (OSM)</option>
-            <option value="job_density">Job Density (LODES)</option>
-          </select>
-        </label>
       </div>
 
       <div class="theory-finding" id="jv-finding">
@@ -129,7 +148,17 @@
 
       <div class="viz-container">
         <div class="bivariate-legend" id="lacy-legend"></div>
-        <div id="lacy-map" class="map-panel"></div>
+        <div class="view-mode-bar" id="lacy-view-bar"></div>
+        <div class="viz-panels" id="lacy-panels" data-mode="side-by-side">
+          <div class="panel panel-reality">
+            <div class="panel-label">St. Louis County Today</div>
+            <div id="lacy-map" class="map-panel"></div>
+          </div>
+          <div class="panel panel-ideal">
+            <div class="panel-label panel-label--ideal">Lacy&rsquo;s Theory Confirmed <em>(illustrative)</em></div>
+            <div id="lacy-ideal-map" class="map-panel"></div>
+          </div>
+        </div>
         <div id="lacy-tooltip" class="tooltip hidden"></div>
       </div>
 
@@ -185,6 +214,7 @@
   <!-- App scripts — order matters -->
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/view-mode.js"></script>
   <script src="js/visualizations/concentric-zones.js"></script>
   <script src="js/visualizations/jacobs-vitality.js"></script>
   <script src="js/visualizations/lacy-suburbs.js"></script>

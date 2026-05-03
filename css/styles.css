@@ -252,3 +252,91 @@ footer {
   text-align: center;
   padding: 1rem;
 }
+
+/* ── View mode toggle ── */
+.view-mode-bar {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.view-mode-btn {
+  padding: 0.28rem 0.85rem;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 3px;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.view-mode-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.view-mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── Viz panels layout ── */
+.viz-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 800px) {
+  .viz-panels { grid-template-columns: 1fr; }
+}
+
+/* Single-panel modes */
+.viz-panels[data-mode="reality"] .panel-ideal,
+.viz-panels[data-mode="overlay"] .panel-ideal { display: none; }
+
+.viz-panels[data-mode="ideal"] .panel-reality { display: none; }
+
+.viz-panels[data-mode="reality"] .panel-reality,
+.viz-panels[data-mode="ideal"]   .panel-ideal,
+.viz-panels[data-mode="overlay"] .panel-reality { grid-column: 1 / -1; }
+
+/* ── Panel labels ── */
+.panel-label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.panel-label--ideal {
+  color: #7a5200;
+}
+
+.panel-label--ideal em {
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+/* ── Bar chart below maps (Jacobs) ── */
+.chart-panel-below {
+  margin-top: 1rem;
+  height: 340px;
+}
+
+.chart-panel-below svg {
+  width: 100%;
+  height: 100%;
+}

@@ -4,7 +4,7 @@
 // Goal: reveal spatial sorting of middle-class Black households into different
 // municipalities than white households at equivalent income levels.
 
-let lacyMap, lacyGeoLayer;
+let lacyMap, lacyIdealMap, lacyGeoLayer;
 
 async function initLacySuburbs() {
   const mapEl = document.getElementById('lacy-map');
@@ -23,7 +23,15 @@ async function initLacySuburbs() {
 
     mapEl.innerHTML = '';
     renderLacyMap(withTerciles);
+    renderLacyIdealMap(withTerciles);
     renderBivariateLegend();
+    setupViewMode({
+      barId:         'lacy-view-bar',
+      panelsId:      'lacy-panels',
+      getRealityMap: () => lacyMap,
+      getIdealMap:   () => lacyIdealMap,
+      buildOverlayLayer: map => buildLacyOverlayLayer(withTerciles, map),
+    });
     updateLacyFinding(withTerciles);
 
   } catch (err) {
@@ -284,4 +292,121 @@ function updateLacyFinding(geojson) {
     a distinct — and more limited — set of places, navigating racial identity in spaces
     that are often majority-Black even at middle-class income levels.</p>
   `;
+}
+
+// ── Ideal map: Lacy's theory confirmed ──
+// Shows what the county would look like if Lacy's sorting pattern held at its theoretical maximum:
+// high-income tracts are sharply split — white-high-income clustered in the west/southwest,
+// Black-high-income clustered in a distinct band to the north/northeast.
+// This is NOT a utopia — it is the theoretical extreme of the pattern she describes.
+// Colors use the same bivariate scheme as the reality map for direct comparison.
+
+// Geographic split: use longitude as a rough east-west proxy within the county.
+// North/northeast (lon > -90.35, lat > 38.70) → Black middle-class band
+// West/southwest (lon < -90.38 or lat < 38.62) → white high-income band
+function lacyIdealTerciles(feature) {
+  const coords = feature.geometry?.coordinates;
+  if (!coords) return { income_tercile: 1, pct_black_tercile: 1 };
+  const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+  const lons = ring.map(c => c[0]);
+  const lats = ring.map(c => c[1]);
+  const lon  = lons.reduce((a, b) => a + b, 0) / lons.length;
+  const lat  = lats.reduce((a, b) => a + b, 0) / lats.length;
+
+  // Black middle-class band: north-central county (Ferguson corridor, University City area)
+  const isBlackMiddleBand = lat > 38.68 && lon > -90.42 && lon < -90.27;
+  // White high-income west: Ladue, Creve Coeur, Clayton corridor
+  const isWhiteHighIncome = lon < -90.36 && lat < 38.72;
+
+  if (isBlackMiddleBand) {
+    return { income_tercile: 2, pct_black_tercile: 2 }; // mid-high income, high % Black
+  } else if (isWhiteHighIncome) {
+    return { income_tercile: 2, pct_black_tercile: 0 }; // high income, low % Black
+  } else {
+    return { income_tercile: 0, pct_black_tercile: 1 }; // lower income, mixed
+  }
+}
+
+function renderLacyIdealMap(geojson) {
+  lacyIdealMap = L.map('lacy-ideal-map', { center: [38.640, -90.380], zoom: 11 });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap, © CartoDB',
+  }).addTo(lacyIdealMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+    attribution: '',
+  }).addTo(lacyIdealMap);
+
+  L.geoJSON(geojson, {
+    style(feature) {
+      const { income_tercile, pct_black_tercile } = lacyIdealTerciles(feature);
+      const color = BIVARIATE_COLORS[income_tercile][pct_black_tercile];
+      return { fillColor: color, fillOpacity: 0.78, color: '#aaa', weight: 0.5 };
+    },
+    onEachFeature(feature, layer) {
+      const { income_tercile, pct_black_tercile } = lacyIdealTerciles(feature);
+      const incomeLabel  = ['Low-income', 'Middle-income', 'High-income'][income_tercile];
+      const blackLabel   = ['Low % Black', 'Mid % Black', 'High % Black'][pct_black_tercile];
+      layer.on('mouseover', () => {
+        layer.bindPopup(
+          `<strong>${feature.properties.NAME}</strong><br>
+           <em>${incomeLabel} · ${blackLabel}</em><br>
+           <small style="color:#888">Illustrative — shows Lacy's sorting pattern at theoretical maximum.</small>`
+        ).openPopup();
+      });
+      layer.on('mouseout', () => layer.closePopup());
+    },
+  }).addTo(lacyIdealMap);
+
+  // Municipality markers — same as reality map for reference
+  NOTABLE_MUNICIPALITIES.forEach(m => {
+    L.circleMarker([m.lat, m.lon], {
+      radius: 5, color: '#333', weight: 1.5, fillColor: '#fff', fillOpacity: 0.9,
+    })
+    .bindTooltip(`<strong>${m.name}</strong><br><em>${m.note}</em>`, { direction: 'right' })
+    .addTo(lacyIdealMap);
+  });
+
+  const legend = L.control({ position: 'bottomright' });
+  legend.onAdd = () => {
+    const div = L.DomUtil.create('div', 'map-legend');
+    div.innerHTML = `
+      <h4 style="color:#7a5200">Ideal (illustrative)</h4>
+      <p style="font-size:0.7rem;color:#666;max-width:140px;line-height:1.4">
+        Lacy's theory confirmed: Black and white middle-class households occupy
+        distinct, sharply bounded suburban spaces.</p>
+    `;
+    return div;
+  };
+  legend.addTo(lacyIdealMap);
+}
+
+// ── Overlay: highlight tracts where reality matches the theoretical sorting ──
+function buildLacyOverlayLayer(geojson, map) {
+  return L.geoJSON(geojson, {
+    style(feature) {
+      const ideal  = lacyIdealTerciles(feature);
+      const realIT = feature.properties.income_tercile;
+      const realBT = feature.properties.pct_black_tercile;
+      // Green = reality matches theoretical sorting; red = diverges
+      const matches = realIT === ideal.income_tercile && realBT === ideal.pct_black_tercile;
+      return {
+        fillColor:   matches ? '#1a9850' : '#d73027',
+        fillOpacity: 0.45,
+        color:       '#555',
+        weight:      0.5,
+      };
+    },
+    onEachFeature(feature, layer) {
+      const ideal  = lacyIdealTerciles(feature);
+      const realIT = feature.properties.income_tercile;
+      const realBT = feature.properties.pct_black_tercile;
+      const matches = realIT === ideal.income_tercile && realBT === ideal.pct_black_tercile;
+      layer.bindTooltip(
+        `${feature.properties.NAME?.replace(/,.*$/, '') || 'Tract'}<br>
+         <strong>${matches ? '✓ Matches Lacy pattern' : '✗ Diverges from Lacy pattern'}</strong>`,
+        { sticky: true, opacity: 0.9 }
+      );
+    },
+  }).addTo(map);
 }
