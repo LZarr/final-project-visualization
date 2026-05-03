@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Sociology & St. Louis</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- D3 -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+  <!-- Local styles -->
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/map.css" />
+</head>
+<body>
+
+  <header>
+    <h1>Urban Sociology &amp; St. Louis</h1>
+    <p class="subtitle">To what extent do canonical urban sociology theories describe contemporary St. Louis?</p>
+    <nav>
+      <a href="#concentric-zones">Concentric Zones</a>
+      <a href="#jacobs-vitality">Sidewalk Vitality</a>
+      <a href="#lacy-suburbs">Suburban Identity</a>
+      <a href="#theory-comparison">Theory Comparison</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ── 1. CONCENTRIC ZONES (Park & Burgess) ── -->
+    <section id="concentric-zones" class="theory-section">
+      <div class="theory-header">
+        <h2>Concentric Zone Model</h2>
+        <p class="theorists">Park &amp; Burgess, 1925</p>
+        <p class="theory-description">
+          The Chicago School proposed that cities grow outward in concentric rings: a central
+          business district, a zone of transition, working-class housing, middle-class residential,
+          and a commuter zone. Each ring was expected to be distinct in land use, income, and
+          racial composition. Does St. Louis still fit this pattern — or has it fractured it?
+        </p>
+        <div class="geography-note">
+          <strong>Geography note:</strong> St. Louis city (independent city, FIPS 29510) and
+          St. Louis County (FIPS 29189) are shown as distinct geographies throughout.
+        </div>
+      </div>
+
+      <div class="viz-container">
+        <div class="controls" id="cz-controls">
+          <label>Layer:
+            <select id="cz-layer-select">
+              <option value="pct_white">% White</option>
+              <option value="pct_black">% Black</option>
+              <option value="median_income">Median Household Income</option>
+              <option value="gini">Gini Index</option>
+            </select>
+          </label>
+          <label>
+            <input type="checkbox" id="cz-show-rings" checked />
+            Show theoretical rings
+          </label>
+        </div>
+        <div id="cz-map" class="map-panel"></div>
+        <div id="cz-tooltip" class="tooltip hidden"></div>
+      </div>
+
+      <div class="theory-finding" id="cz-finding">
+        <p>Loading data…</p>
+      </div>
+    </section>
+
+    <!-- ── 2. SIDEWALK VITALITY (Jane Jacobs) ── -->
+    <section id="jacobs-vitality" class="theory-section">
+      <div class="theory-header">
+        <h2>Sidewalk Life &amp; Urban Vitality</h2>
+        <p class="theorists">Jane Jacobs, 1961</p>
+        <p class="theory-description">
+          Jacobs argued that urban vitality emerges from four conditions: mixed land uses,
+          short blocks, buildings of varying age, and sufficient population density. "Eyes on
+          the street" — the constant informal surveillance of active pedestrian spaces — were
+          her proxy for neighborhood health. This visualization measures vitality through
+          mixed-use density (OpenStreetMap POIs) and workplace concentration (Census LODES).
+        </p>
+      </div>
+
+      <div class="viz-container two-panel">
+        <div id="jv-map" class="map-panel"></div>
+        <div id="jv-chart" class="chart-panel">
+          <svg id="jv-bar-chart"></svg>
+        </div>
+      </div>
+
+      <div class="controls" id="jv-controls">
+        <label>Metric:
+          <select id="jv-metric-select">
+            <option value="poi_density">POI Density (OSM)</option>
+            <option value="job_density">Job Density (LODES)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="theory-finding" id="jv-finding">
+        <p>Loading data…</p>
+      </div>
+    </section>
+
+    <!-- ── 3. SUBURBAN IDENTITY (Karyn Lacy) ── -->
+    <section id="lacy-suburbs" class="theory-section">
+      <div class="theory-header">
+        <h2>Black Middle-Class Suburban Identity</h2>
+        <p class="theorists">Karyn Lacy, <em>Blue-Chip Black</em>, 2007</p>
+        <p class="theory-description">
+          Lacy documented how middle-class Black suburbanites navigate a precarious position:
+          economically arrived, but still racially marked in predominantly white suburban spaces.
+          They engage in "boundary work" — managing identity through consumption, social networks,
+          and residential choice. This map asks: in St. Louis County, where do middle-class Black
+          households actually live? Are they in the same municipalities as white households
+          at equivalent incomes — or sorted into different spaces?
+        </p>
+        <div class="geography-note">
+          <strong>Geography note:</strong> This visualization covers St. Louis County only
+          (FIPS 29189), where suburban municipalities are located.
+          St. Louis city is excluded by design.
+        </div>
+      </div>
+
+      <div class="viz-container">
+        <div class="bivariate-legend" id="lacy-legend"></div>
+        <div id="lacy-map" class="map-panel"></div>
+        <div id="lacy-tooltip" class="tooltip hidden"></div>
+      </div>
+
+      <div class="municipality-panel" id="lacy-municipalities">
+        <h3>Notable Municipalities</h3>
+        <ul>
+          <li><strong>Ferguson</strong> — majority Black, middle-income; site of 2014 uprising</li>
+          <li><strong>University City</strong> — racially mixed, middle-income</li>
+          <li><strong>Ladue</strong> — predominantly white, high-income</li>
+          <li><strong>Creve Coeur</strong> — predominantly white, high-income</li>
+          <li><strong>Florissant</strong> — majority Black, working-to-middle income</li>
+          <li><strong>Clayton</strong> — county seat, predominantly white, high-income</li>
+        </ul>
+      </div>
+
+      <div class="theory-finding" id="lacy-finding">
+        <p>Loading data…</p>
+      </div>
+    </section>
+
+    <!-- ── 4. THEORY COMPARISON ── -->
+    <section id="theory-comparison" class="theory-section">
+      <div class="theory-header">
+        <h2>Theory Comparison</h2>
+        <p class="theory-description">
+          Overlay data layers from all three frameworks on a single map. Where do the theories
+          converge — and where does St. Louis defy them?
+        </p>
+      </div>
+
+      <div class="viz-container">
+        <div class="controls" id="tc-controls">
+          <label><input type="checkbox" id="tc-zones" checked /> Concentric zones</label>
+          <label><input type="checkbox" id="tc-vitality" /> Vitality (Jacobs)</label>
+          <label><input type="checkbox" id="tc-lacy" /> Black middle-class tracts (Lacy)</label>
+          <label><input type="checkbox" id="tc-vacancy" /> Vacancy rate</label>
+        </div>
+        <div id="tc-map" class="map-panel map-panel--large"></div>
+      </div>
+
+      <div class="theory-finding" id="tc-finding">
+        <p>Select layers above to compare theories spatially.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Data: U.S. Census Bureau ACS 5-year estimates (2019–2023), OpenStreetMap, Census LODES.
+       St. Louis city (FIPS 29510) and St. Louis County (FIPS 29189) treated as distinct geographies.</p>
+  </footer>
+
+  <!-- App scripts — order matters -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/visualizations/concentric-zones.js"></script>
+  <script src="js/visualizations/jacobs-vitality.js"></script>
+  <script src="js/visualizations/lacy-suburbs.js"></script>
+  <script src="js/visualizations/theory-comparison.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
