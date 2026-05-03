@@ -273,15 +273,14 @@ function updateLacyFinding(geojson) {
     : '—';
 
   el.innerHTML = `
-    <p><strong>Lacy's argument — spatial test:</strong>
+    <p><strong>Spatial test of Lacy's argument:</strong>
     Of <strong>${highIncomeTotal}</strong> high-income tracts in St. Louis County,
     only <strong>${highIncomeHighBlack}</strong> (${pct}%) are also in the high % Black tercile.
-    The dark purple cells on the map — representing majority-Black, high-income tracts — are
-    concentrated in a narrow band of municipalities (notably University City, parts of Florissant)
+    The dark purple cells on the map, representing majority-Black, high-income tracts, are
+    concentrated in a narrow band of municipalities (notably University City and parts of Florissant)
     rather than distributed evenly across the county's affluent areas.
     This spatial sorting is precisely what Lacy documents: middle-class Black families in St. Louis
-    County are not simply integrated into the county's wealthiest suburbs; they occupy
-    a distinct — and more limited — set of places, navigating racial identity in spaces
+    County occupy a distinct and more limited set of places, navigating racial identity in spaces
     that are often majority-Black even at middle-class income levels.</p>
   `;
 }

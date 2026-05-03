@@ -308,12 +308,12 @@ function updateTCFinding(scoredFeatures) {
     Note that criteria (1) and (2) are mutually exclusive within the city,
     so a score of 3 requires a county tract satisfying both a Burgess pattern and Lacy's criterion.</p>
 
-    <p><strong>Key finding:</strong> The most theoretically dense zones — where multiple frameworks
-    point to the same geography — cluster along the inner city&ndash;county boundary.
+    <p><strong>Key finding:</strong> The most theoretically dense zones, where multiple frameworks
+    point to the same geography, cluster along the inner city/county boundary.
     The near-north side of St. Louis city satisfies the Park &amp; Burgess transition zone
     prediction but defies Jacobs (high vacancy, not vitality).
     The suburban corridor running through Ferguson and University City satisfies Lacy&rsquo;s
-    sorting pattern. The city&ndash;county boundary itself, an administrative artifact
+    sorting pattern. The city/county boundary itself, an administrative artifact
     unique to St. Louis, creates a discontinuity none of the three theories anticipate.</p>
   `;
 }

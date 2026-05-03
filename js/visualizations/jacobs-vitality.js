@@ -56,19 +56,20 @@ async function initJacobsVitality() {
     const cityWithVitality = computeVitalityMetrics(cityWithLODES, poiGJ);
 
     renderJVMap(cityWithVitality);
-    renderJVIdealMap(cityWithVitality);
+    renderJVIdealMap(cityWithVitality, 'poi_density');
     renderJVBarChart(cityWithVitality, 'poi_density');
     setupViewMode({
       barId:         'jv-view-bar',
       panelsId:      'jv-panels',
       getRealityMap: () => jvMap,
       getIdealMap:   () => jvIdealMap,
-      buildOverlayLayer: map => buildJVOverlayLayer(cityWithVitality, map),
+      buildOverlayLayer: map => buildJVOverlayLayer(cityWithVitality, map, 'poi_density'),
     });
 
     document.getElementById('jv-metric-select').addEventListener('change', e => {
       const metric = e.target.value;
       jvGeoLayer.setStyle(f => jvStyle(f, metric));
+      updateJVIdealMap(metric);
       renderJVBarChart(cityWithVitality, metric);
       updateJVFinding(cityWithVitality, metric);
     });
@@ -341,45 +342,58 @@ function updateJVFinding(geojson, metric) {
   const highCount = vals.filter(v => v >= p90).length;
 
   el.innerHTML = `
-    <p><strong>Jacobs vitality — ${metric === 'poi_density' ? 'POI density' : 'job density'}:</strong>
-    Median across city tracts: <strong>${median.toFixed(1)}</strong>${metric === 'poi_density' ? ' POIs/km²' : ' jobs/km²'}.
+    <p><strong>${metric === 'poi_density' ? 'Points of interest (POI) density' : 'Job density'}:</strong>
+    The median across city tracts is <strong>${median.toFixed(1)}</strong>${metric === 'poi_density' ? ' POIs/km²' : ' jobs/km²'}.
     Only <strong>${highCount}</strong> tracts reach the 90th percentile (${p90.toFixed(1)}+),
     concentrated in neighborhoods like Soulard, The Hill, and Downtown/Midtown.
     Jacobs predicted that vitality requires sustained mixed-use density throughout a neighborhood,
-    not just pockets — St. Louis's pattern of concentrated activity surrounded by low-density
-    residential tracts suggests her conditions are met in isolated nodes rather than a continuous
-    urban fabric.</p>
+    not just in isolated pockets. St. Louis's pattern of concentrated activity surrounded by
+    low-density residential tracts suggests her conditions are met in nodes rather than as a
+    continuous urban fabric.</p>
   `;
 }
 
 // ── Ideal map: Jane Jacobs ──
 // Shows what St. Louis would look like if Jacobs's conditions held everywhere:
-// uniformly high and evenly distributed POI density across all tracts,
-// with a mild gradient toward the core (denser center, still vital everywhere).
+// uniformly high and evenly distributed density, with a mild gradient toward the core.
 
-// Ideal POI density per tract: high throughout, slight peak near center
-function jvIdealDensity(feature) {
+let jvIdealGeoLayer = null;
+let jvIdealLegendControl = null;
+let jvIdealGeojson = null;
+
+// Ideal POI density: high throughout, slight peak near center, floor at 30
+function jvIdealPOIDensity(feature) {
+  const dist = jvDistFromDowntown(feature);
+  return Math.max(30, 80 - dist * 3.5);
+}
+
+// Ideal job density: high concentration downtown, tapering to a minimum outward
+function jvIdealJobDensity(feature) {
+  const dist = jvDistFromDowntown(feature);
+  return Math.max(500, 5000 - dist * 400);
+}
+
+function jvIdealValue(feature, metric) {
+  return metric === 'job_density' ? jvIdealJobDensity(feature) : jvIdealPOIDensity(feature);
+}
+
+function jvDistFromDowntown(feature) {
   const coords = feature.geometry?.coordinates;
-  if (!coords) return 40;
+  if (!coords) return 5;
   const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
   const lons = ring.map(c => c[0]);
   const lats = ring.map(c => c[1]);
   const lat  = lats.reduce((a, b) => a + b, 0) / lats.length;
   const lon  = lons.reduce((a, b) => a + b, 0) / lons.length;
-
-  // Distance from downtown — closer = denser, but floor is high
-  const R = 6371;
-  const [clat, clon] = [38.6331, -90.1997];
+  const R = 6371, [clat, clon] = [38.6331, -90.1997];
   const dLat = (lat - clat) * Math.PI / 180;
   const dLon = (lon - clon) * Math.PI / 180;
   const a = Math.sin(dLat/2)**2 + Math.cos(clat*Math.PI/180)*Math.cos(lat*Math.PI/180)*Math.sin(dLon/2)**2;
-  const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  // Jacobs ideal: no tract below 30 POIs/km²; peaks at ~80 near core
-  return Math.max(30, 80 - dist * 3.5);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function renderJVIdealMap(geojson) {
+function renderJVIdealMap(geojson, metric) {
+  jvIdealGeojson = geojson;
   jvIdealMap = L.map('jv-ideal-map', { center: [38.627, -90.230], zoom: 12 });
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
@@ -389,61 +403,78 @@ function renderJVIdealMap(geojson) {
     attribution: '',
   }).addTo(jvIdealMap);
 
-  const scale = JV_SCALES['poi_density'];
+  jvIdealGeoLayer = _buildJVIdealLayer(geojson, metric);
+  jvIdealLegendControl = _buildJVIdealLegend(metric);
+  jvIdealLegendControl.addTo(jvIdealMap);
+}
 
-  L.geoJSON(geojson, {
+function updateJVIdealMap(metric) {
+  if (!jvIdealMap || !jvIdealGeojson) return;
+  if (jvIdealGeoLayer) jvIdealMap.removeLayer(jvIdealGeoLayer);
+  if (jvIdealLegendControl) jvIdealMap.removeControl(jvIdealLegendControl);
+  jvIdealGeoLayer = _buildJVIdealLayer(jvIdealGeojson, metric);
+  jvIdealLegendControl = _buildJVIdealLegend(metric);
+  jvIdealLegendControl.addTo(jvIdealMap);
+}
+
+function _buildJVIdealLayer(geojson, metric) {
+  const scale = JV_SCALES[metric];
+  return L.geoJSON(geojson, {
     style(feature) {
-      const val = jvIdealDensity(feature);
-      return {
-        fillColor:   scale(val),
-        fillOpacity: 0.75,
-        color:       '#555',
-        weight:      0.5,
-      };
+      const val = jvIdealValue(feature, metric);
+      return { fillColor: scale(val), fillOpacity: 0.75, color: '#555', weight: 0.5 };
     },
     onEachFeature(feature, layer) {
-      const val = jvIdealDensity(feature);
+      const val = jvIdealValue(feature, metric);
+      const label = metric === 'job_density'
+        ? `Ideal job density: ${val.toFixed(0)} / km²`
+        : `Ideal POI density: ${val.toFixed(1)} / km²`;
       layer.on('mouseover', () => {
         layer.bindPopup(
-          `<strong>${feature.properties.NAME}</strong><br>
-           Ideal POI density: ${val.toFixed(1)} / km²<br>
-           <small style="color:#888">Illustrative — derived from Jacobs's theory, not OSM data.</small>`
+          `<strong>${feature.properties.NAME}</strong><br>${label}<br>
+           <small style="color:#888">Illustrative — derived from Jacobs's theory, not measured data.</small>`
         ).openPopup();
       });
       layer.on('mouseout', () => layer.closePopup());
     },
   }).addTo(jvIdealMap);
+}
 
+function _buildJVIdealLegend(metric) {
+  const scale = JV_SCALES[metric];
+  const [lo, hi] = scale.domain();
+  const steps = 5;
+  const colors = Array.from({ length: steps }, (_, i) => scale(lo + (hi - lo) * i / (steps - 1)));
+  const metricLabel = metric === 'job_density' ? 'Jobs / km² (LODES)' : 'POIs / km² (OSM)';
   const legend = L.control({ position: 'bottomright' });
   legend.onAdd = () => {
     const div = L.DomUtil.create('div', 'map-legend');
-    const steps = 5;
-    const [lo, hi] = scale.domain();
-    const colors = Array.from({ length: steps }, (_, i) => scale(lo + (hi - lo) * i / (steps - 1)));
     div.innerHTML = `
       <h4 style="color:#7a5200">Ideal (illustrative)</h4>
+      <div style="font-size:0.7rem;color:#888;margin-bottom:0.3rem">${metricLabel}</div>
       <div class="legend-gradient">
         <div class="legend-gradient-bar"
              style="background:linear-gradient(to right,${colors.join(',')})"></div>
         <div class="legend-gradient-labels"><span>${lo}</span><span>${hi}+</span></div>
       </div>
       <p style="font-size:0.7rem;color:#666;max-width:130px;line-height:1.4;margin-top:0.4rem">
-        Jacobs ideal: high mixed-use density everywhere, not just in pockets.</p>
+        Jacobs ideal: high density throughout, not concentrated in isolated nodes.</p>
     `;
     return div;
   };
-  legend.addTo(jvIdealMap);
+  return legend;
 }
 
-// ── Overlay: ideal density contour drawn on the reality map ──
-function buildJVOverlayLayer(geojson, map) {
+// ── Overlay: gap between ideal and reality drawn on the reality map ──
+function buildJVOverlayLayer(geojson, map, metric) {
+  metric = metric || document.getElementById('jv-metric-select')?.value || 'poi_density';
+  const maxDomain = JV_SCALES[metric].domain()[1];
   return L.geoJSON(geojson, {
     style(feature) {
-      const idealVal   = jvIdealDensity(feature);
-      const realVal    = feature.properties.poi_density || 0;
-      const deficit    = idealVal - realVal;
-      // Hatching via opacity: larger deficit = more opaque red overlay
-      const opacity = Math.min(0.6, Math.max(0, deficit / 80));
+      const idealVal = jvIdealValue(feature, metric);
+      const realVal  = feature.properties[metric] || 0;
+      const deficit  = idealVal - realVal;
+      const opacity  = Math.min(0.6, Math.max(0, deficit / maxDomain));
       return {
         fillColor:   deficit > 0 ? '#d73027' : '#1a9850',
         fillOpacity: opacity,
@@ -452,13 +483,14 @@ function buildJVOverlayLayer(geojson, map) {
       };
     },
     onEachFeature(feature, layer) {
-      const ideal = jvIdealDensity(feature);
-      const real  = feature.properties.poi_density || 0;
+      const ideal = jvIdealValue(feature, metric);
+      const real  = feature.properties[metric] || 0;
       const diff  = ideal - real;
+      const fmt   = metric === 'job_density' ? v => v.toFixed(0) : v => v.toFixed(1);
       layer.bindTooltip(
         `${feature.properties.NAME?.replace(/,.*$/, '') || 'Tract'}<br>
-         Real: ${real.toFixed(1)} · Ideal: ${ideal.toFixed(1)}<br>
-         <strong>${diff > 0 ? '▼ Gap: ' + diff.toFixed(1) : '✓ Meets ideal'}</strong>`,
+         Real: ${fmt(real)} / Ideal: ${fmt(ideal)}<br>
+         <strong>${diff > 0 ? 'Gap: ' + fmt(diff) : 'Meets ideal'}</strong>`,
         { sticky: true, opacity: 0.9 }
       );
     },

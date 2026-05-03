@@ -40,7 +40,7 @@
           The Chicago School proposed that cities grow outward in concentric rings: a central
           business district, a zone of transition, working-class housing, middle-class residential,
           and a commuter zone. Each ring was expected to be distinct in land use, income, and
-          racial composition. Does St. Louis still fit this pattern — or has it fractured it?
+          racial composition. Does St. Louis still fit this pattern, or has it fractured it?
         </p>
         <div class="geography-note">
           <strong>Geography note:</strong> St. Louis city (independent city, FIPS 29510) and
@@ -52,10 +52,10 @@
         <div class="controls" id="cz-controls">
           <label>Layer:
             <select id="cz-layer-select">
+              <option value="gini">Gini Index</option>
+              <option value="median_income">Median Household Income</option>
               <option value="pct_white">% White</option>
               <option value="pct_black">% Black</option>
-              <option value="median_income">Median Household Income</option>
-              <option value="gini">Gini Index</option>
             </select>
           </label>
           <label>
@@ -90,9 +90,12 @@
         <p class="theory-description">
           Jacobs argued that urban vitality emerges from four conditions: mixed land uses,
           short blocks, buildings of varying age, and sufficient population density. "Eyes on
-          the street" — the constant informal surveillance of active pedestrian spaces — were
-          her proxy for neighborhood health. This visualization measures vitality through
-          mixed-use density (OpenStreetMap POIs) and workplace concentration (Census LODES).
+          the street," meaning the informal surveillance that comes from active pedestrian spaces,
+          was her proxy for neighborhood health. This visualization measures vitality through
+          two metrics: points of interest (POIs) per square kilometer, drawn from OpenStreetMap,
+          which count the density of shops, restaurants, offices, and other amenities as a proxy
+          for mixed-use activity; and job density per square kilometer from the Census LODES dataset,
+          which captures workplace concentration as a measure of daytime street activity.
         </p>
       </div>
 
@@ -134,10 +137,12 @@
         <p class="theory-description">
           Lacy documented how middle-class Black suburbanites navigate a precarious position:
           economically arrived, but still racially marked in predominantly white suburban spaces.
-          They engage in "boundary work" — managing identity through consumption, social networks,
+          They engage in "boundary work," managing identity through consumption, social networks,
           and residential choice. This map asks: in St. Louis County, where do middle-class Black
           households actually live? Are they in the same municipalities as white households
-          at equivalent incomes — or sorted into different spaces?
+          at equivalent incomes, or sorted into different spaces? Because Lacy's theory describes
+          a real pattern of spatial sorting rather than prescribing what an ideal city should look
+          like, there is no illustrative ideal map for this section.
         </p>
         <div class="geography-note">
           <strong>Geography note:</strong> This visualization covers St. Louis County only
@@ -155,12 +160,12 @@
       <div class="municipality-panel" id="lacy-municipalities">
         <h3>Notable Municipalities</h3>
         <ul>
-          <li><strong>Ferguson</strong> — majority Black, middle-income; site of 2014 uprising</li>
-          <li><strong>University City</strong> — racially mixed, middle-income</li>
-          <li><strong>Ladue</strong> — predominantly white, high-income</li>
-          <li><strong>Creve Coeur</strong> — predominantly white, high-income</li>
-          <li><strong>Florissant</strong> — majority Black, working-to-middle income</li>
-          <li><strong>Clayton</strong> — county seat, predominantly white, high-income</li>
+          <li><strong>Ferguson:</strong> majority Black, middle-income; site of 2014 uprising</li>
+          <li><strong>University City:</strong> racially mixed, middle-income</li>
+          <li><strong>Ladue:</strong> predominantly white, high-income</li>
+          <li><strong>Creve Coeur:</strong> predominantly white, high-income</li>
+          <li><strong>Florissant:</strong> majority Black, working-to-middle income</li>
+          <li><strong>Clayton:</strong> county seat, predominantly white, high-income</li>
         </ul>
       </div>
 
@@ -175,7 +180,7 @@
         <h2>Theory Comparison</h2>
         <p class="theory-description">
           Overlay data layers from all three frameworks on a single map. Where do the theories
-          converge — and where does St. Louis defy them?
+          converge, and where does St. Louis defy them?
         </p>
       </div>
 

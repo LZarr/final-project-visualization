@@ -252,17 +252,19 @@ function updateCZFinding(geojson) {
   const direction = outerMean > innerMean ? 'higher' : 'lower';
   const label = CZ_LABELS[layer];
 
+  const WHY = {
+    gini: 'Park and Burgess predicted that income inequality would be highest in the zone of transition, closest to the urban core, and would decrease outward as neighborhoods became more economically homogeneous. A stronger inner-to-outer gradient here indicates closer alignment with that prediction.',
+    median_income: 'The concentric zone model predicts that income rises with distance from the center, as wealthier residents occupy outer rings. A consistent outward income gradient supports the theory; a flat or reversed pattern suggests it does not apply.',
+    pct_white: 'Park and Burgess assumed that racial and ethnic succession would push non-white groups toward the urban core over time. Higher white percentages in outer rings relative to inner ones is consistent with that assumption, though the historical forces driving this pattern in St. Louis differ significantly from those the theory anticipated.',
+    pct_black: 'The theory predicted that recently arrived groups would concentrate near the urban core and disperse outward over generations. In St. Louis, Black residents remain disproportionately concentrated near the core, a pattern shaped more by redlining and urban renewal than by voluntary succession dynamics.',
+  };
+
   el.innerHTML = `
-    <p><strong>Pattern check — ${label}:</strong>
+    <p><strong>${label}:</strong>
     Inner zones (within 4km of downtown) average <strong>${fmt(innerMean)}</strong>;
-    outer zones (beyond 7km) average <strong>${fmt(outerMean)}</strong>
-    — ${Math.abs(+diff)}% ${direction} toward the periphery.
-    ${layer === 'pct_black' && outerMean < innerMean
-      ? ' This inverts the Park & Burgess expectation of outward racial succession — St. Louis shows concentrated Black population near the core, a pattern shaped by decades of redlining and urban renewal displacement.'
-      : layer === 'median_income' && outerMean > innerMean
-      ? ' The income gradient broadly follows the concentric model, though the separation of the independent city from the county creates a discontinuity not present in the original Chicago framework.'
-      : ''}
-    </p>
+    outer zones (beyond 7km) average <strong>${fmt(outerMean)}</strong>,
+    which is ${Math.abs(+diff)}% ${direction}.</p>
+    <p>${WHY[layer] || ''}</p>
   `;
 }
 
