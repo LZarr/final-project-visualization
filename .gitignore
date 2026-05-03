@@ -1,0 +1,14 @@
+# Ignore everything in the home directory by default
+*
+
+# Except the project files
+!.gitignore
+!index.html
+!/css/
+!/css/**
+!/js/
+!/js/**
+!/data/
+!/data/**
+!/assets/
+!/assets/**
