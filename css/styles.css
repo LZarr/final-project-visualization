@@ -42,7 +42,7 @@ header h1 {
 header .subtitle {
   font-size: 1rem;
   opacity: 0.85;
-  max-width: 600px;
+  white-space: nowrap;
   margin: 0 auto 1.5rem;
   font-style: italic;
 }
@@ -341,9 +341,40 @@ footer {
   height: 100%;
 }
 /* ── References Section ── */
-.references-list {
+.references-details {
   max-width: 720px;
+}
+
+.references-details summary {
+  cursor: pointer;
+  font-family: var(--font-ui);
   font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 0.5rem 0;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.references-details summary::before {
+  content: '\25B6';
+  font-size: 0.65rem;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.references-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.references-details summary::-webkit-details-marker { display: none; }
+
+.references-list {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
   font-family: var(--font-ui);
   color: #444;
 }
@@ -353,11 +384,4 @@ footer {
   padding-left: 1.5rem;
   text-indent: -1.5rem;
   line-height: 1.6;
-}
-
-.references-data {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-  color: var(--text-muted);
 }
