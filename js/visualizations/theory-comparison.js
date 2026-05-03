@@ -297,23 +297,37 @@ function updateTCFinding(scoredFeatures) {
   el.innerHTML = `
     <p><strong>Where do the theories converge?</strong>
     Of ${total} tracts with data, <strong>${score2}</strong> match two theory patterns simultaneously
-    and <strong>${score3}</strong> match all three — shown in dark red on the map.
+    and <strong>${score3}</strong> match all three, shown in dark red on the map.
     Click any tract to see which patterns it satisfies.</p>
 
     <p><strong>How the score works:</strong> Each tract earns one point per theory whose
-    predicted pattern it exhibits —
-    (1) <em>Park &amp; Burgess</em>: high vacancy in the Zone of Transition (2–7 km from downtown);
+    predicted pattern it exhibits:
+    (1) <em>Park &amp; Burgess</em>: high vacancy in the Zone of Transition (2-7 km from downtown);
     (2) <em>Jacobs</em>: low vacancy in city tracts, signaling active street life;
     (3) <em>Lacy</em>: high-income, majority-Black tract in St. Louis County.
     Note that criteria (1) and (2) are mutually exclusive within the city,
     so a score of 3 requires a county tract satisfying both a Burgess pattern and Lacy's criterion.</p>
 
-    <p><strong>Key finding:</strong> The most theoretically dense zones, where multiple frameworks
+    <p><strong>Key finding:</strong> The most theoretically active zones, where multiple frameworks
     point to the same geography, cluster along the inner city/county boundary.
     The near-north side of St. Louis city satisfies the Park &amp; Burgess transition zone
     prediction but defies Jacobs (high vacancy, not vitality).
-    The suburban corridor running through Ferguson and University City satisfies Lacy&rsquo;s
-    sorting pattern. The city/county boundary itself, an administrative artifact
-    unique to St. Louis, creates a discontinuity none of the three theories anticipate.</p>
+    The suburban corridor running through Ferguson and University City satisfies Lacy\u2019s
+    sorting pattern.</p>
+
+    <p><strong>Why the city/county boundary matters:</strong> In 1876, St. Louis city separated
+    from St. Louis County in what became known as the "Great Divorce," making it an independent
+    city with no county government of its own. This is a rare arrangement in the United States,
+    and none of the three theories anticipate it. Park and Burgess assumed a unified metropolitan
+    jurisdiction when they described zones spreading outward from a single core; their model has
+    no mechanism for a hard administrative boundary cutting across the rings. Jacobs analyzed
+    street-level vitality as a product of land use and building age, but municipal fragmentation
+    shapes school districts, tax bases, and public investment in ways that affect which streets
+    thrive and which decline. For Lacy, the boundary is especially consequential: Black
+    middle-class families in her account sort themselves into specific municipalities partly
+    based on which side of the city/county line they fall on, since county municipalities offer
+    distinct identities and services unavailable inside city limits. The boundary is not just an
+    administrative artifact; it is a structural feature of the St. Louis metropolitan area that
+    all three theories would need to accommodate to fully explain what we observe here.</p>
   `;
 }

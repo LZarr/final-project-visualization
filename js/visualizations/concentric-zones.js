@@ -22,6 +22,22 @@ function czCentroid(feature) {
   return [lats.reduce((a,b)=>a+b,0)/lats.length, lons.reduce((a,b)=>a+b,0)/lons.length];
 }
 
+// Approximate polygon area in km² using the Shoelace formula with local projection.
+// Accurate enough for census tracts at St. Louis latitude (~38.6°).
+function czAreaKm2(feature) {
+  const coords = feature.geometry?.coordinates;
+  if (!coords) return null;
+  const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+  const latKm = 111.32;
+  const lonKm = 111.32 * Math.cos(38.6 * Math.PI / 180);
+  let area = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    area += (ring[j][0] * lonKm) * (ring[i][1] * latKm);
+    area -= (ring[i][0] * lonKm) * (ring[j][1] * latKm);
+  }
+  return Math.abs(area / 2);
+}
+
 async function initConcentricZones() {
   const container = document.getElementById('cz-map');
   container.innerHTML = '<div class="loading-msg">Loading Census data…</div>';
@@ -32,6 +48,14 @@ async function initConcentricZones() {
       fetchDemographics(),
     ]);
     const joined = joinDataToGeoJSON(geojson, data);
+
+    // Attach pop_density (persons per km²) to each feature using polygon area
+    joined.features.forEach(f => {
+      const area = czAreaKm2(f);
+      const pop  = f.properties.total_pop;
+      f.properties.pop_density = (area && area > 0 && pop != null) ? pop / area : null;
+    });
+
     container.innerHTML = '';
     renderCZMap(joined);
     renderCZIdealMap(joined);
@@ -95,6 +119,7 @@ const CZ_SCALES = {
   pct_black:      d3.scaleSequential(d3.interpolateOranges).domain([0, 100]),
   median_income:  d3.scaleSequential(d3.interpolateGreens).domain([0, 120000]),
   gini:           d3.scaleSequential(d3.interpolateReds).domain([0.25, 0.65]),
+  pop_density:    d3.scaleSequential(d3.interpolateViridis).domain([0, 8000]),
 };
 
 const CZ_LABELS = {
@@ -102,6 +127,7 @@ const CZ_LABELS = {
   pct_black:      '% Black or African American',
   median_income:  'Median Household Income',
   gini:           'Gini Index (income inequality)',
+  pop_density:    'Population Density (persons/km\u00b2)',
 };
 
 function czStyle(feature, layerKey) {
@@ -189,6 +215,8 @@ function updateCZLegend(layerKey, div) {
   const label = CZ_LABELS[layerKey];
   const fmt = layerKey === 'median_income'
     ? v => `$${Math.round(v / 1000)}k`
+    : layerKey === 'pop_density'
+    ? v => `${Math.round(v).toLocaleString()}/km\u00b2`
     : v => layerKey === 'gini' ? v.toFixed(2) : Math.round(v) + '%';
 
   // Build a small gradient bar
@@ -246,6 +274,8 @@ function updateCZFinding(geojson) {
 
   const fmt = layer === 'median_income'
     ? v => `$${Math.round(v).toLocaleString()}`
+    : layer === 'pop_density'
+    ? v => `${Math.round(v).toLocaleString()} persons/km\u00b2`
     : v => v.toFixed(1) + (layer === 'gini' ? '' : '%');
 
   const diff = ((outerMean - innerMean) / innerMean * 100).toFixed(0);
@@ -257,6 +287,7 @@ function updateCZFinding(geojson) {
     median_income: 'The concentric zone model predicts that income rises with distance from the center, as wealthier residents occupy outer rings. A consistent outward income gradient supports the theory; a flat or reversed pattern suggests it does not apply.',
     pct_white: 'Park and Burgess assumed that racial and ethnic succession would push non-white groups toward the urban core over time. Higher white percentages in outer rings relative to inner ones is consistent with that assumption, though the historical forces driving this pattern in St. Louis differ significantly from those the theory anticipated.',
     pct_black: 'The theory predicted that recently arrived groups would concentrate near the urban core and disperse outward over generations. In St. Louis, Black residents remain disproportionately concentrated near the core, a pattern shaped more by redlining and urban renewal than by voluntary succession dynamics.',
+    pop_density: 'Wirth argued that population density is one of three defining features of urban life (alongside size and heterogeneity), and that dense concentration of people produces the social differentiation and sorting visible in the zones. The concentric model predicts density decreasing with distance from the core. Where St. Louis diverges from this gradient, vacancy, disinvestment, and outmigration have thinned inner-city populations well below what the theory anticipates.',
   };
 
   el.innerHTML = `
@@ -292,6 +323,7 @@ function czIdealValue(distKm, layerKey) {
     pct_black:     (1 - t) * 80,        // decreases outward
     median_income: t * 120000,          // increases outward
     gini:          0.55 - t * 0.2,      // higher inequality near core
+    pop_density:   (1 - t) * 8000,     // decreases outward — dense core, sparse periphery
   };
   return scales[layerKey] ?? 0;
 }
