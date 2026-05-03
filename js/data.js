@@ -98,26 +98,22 @@ async function fetchDemographics() {
 }
 
 // ── GeoJSON tract boundaries ──
+// Served from /data/ — downloaded from TIGERweb and committed to the repo.
+// City (510) and county (189) are separate files; never merged into one.
 
-/**
- * Fetch Census cartographic boundary GeoJSON for tracts in a county.
- * Uses the uscensusbureau citysdk mirror on GitHub (no API key required).
- */
+const GEOJSON_FILES = {
+  [FIPS.STL_CITY]:   'data/stl-city-tracts.geojson',
+  [FIPS.STL_COUNTY]: 'data/stl-county-tracts.geojson',
+};
+
 async function fetchTractGeoJSON(county) {
-  // The citysdk mirror organizes files as /500k/YEAR/STATE/COUNTY.json
-  const url = `${TIGER_BASE}/${FIPS.STATE}/${county}/tract.json`;
   const key = cacheKey('geojson', county);
   if (DataCache[key]) return DataCache[key];
 
-  let geojson;
-  try {
-    geojson = await fetchJSON(url);
-  } catch (e) {
-    // Fall back to Census Bureau TIGERweb GeoJSON service
-    const fallback = `https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_ACS2023/MapServer/8/query?where=STATE%3D'${FIPS.STATE}'+AND+COUNTY%3D'${county}'&outFields=GEOID,NAME&f=geojson&outSR=4326`;
-    geojson = await fetchJSON(fallback);
-  }
+  const path = GEOJSON_FILES[county];
+  if (!path) throw new Error(`No GeoJSON file configured for county FIPS: ${county}`);
 
+  const geojson = await fetchJSON(path);
   DataCache[key] = geojson;
   return geojson;
 }
